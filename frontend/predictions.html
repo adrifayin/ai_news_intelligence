@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prediction Markets — DataStraw</title>
+  <meta name="description" content="Prediction market odds from Polymarket matched with AI news sentiment analysis.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-logo"><div class="logo-icon">⚡</div><span>DataStraw</span></div>
+    <div class="nav-links">
+      <a href="/" class="nav-link">📰 News</a>
+      <a href="/market" class="nav-link">📈 Markets</a>
+      <a href="/predictions" class="nav-link active">🎯 Predictions</a>
+    </div>
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="section-header">
+      <h1 class="section-title">🎯 Prediction Markets</h1>
+    </div>
+
+    <!-- Category Filters -->
+    <section class="filter-rail" id="marketFilterRail">
+      <button class="filter-pill active" data-category="all">All</button>
+      <button class="filter-pill" data-category="Politics">🏛️ Politics</button>
+      <button class="filter-pill" data-category="Economics">💰 Economics</button>
+      <button class="filter-pill" data-category="Technology">💻 Technology</button>
+      <button class="filter-pill" data-category="Science">🔬 Science</button>
+      <button class="filter-pill" data-category="Geopolitics">🌍 Geopolitics</button>
+    </section>
+
+    <!-- Markets List -->
+    <div id="marketsList">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Comparison Section -->
+    <div class="chart-container" style="margin-top:24px">
+      <div class="chart-title">📊 News Sentiment vs Market Odds</div>
+      <canvas id="comparisonChart" height="250"></canvas>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

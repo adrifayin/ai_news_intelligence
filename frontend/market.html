@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markets — DataStraw</title>
+  <meta name="description" content="AI-powered market intelligence with ticker sentiment analysis and sector insights.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav" id="navbar">
+    <div class="nav-logo">
+      <div class="logo-icon">⚡</div>
+      <span>DataStraw</span>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="nav-link" id="nav-news">📰 News</a>
+      <a href="/market" class="nav-link active" id="nav-market">📈 Markets</a>
+      <a href="/predictions" class="nav-link" id="nav-predictions">🎯 Predictions</a>
+    </div>
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+      <button class="login-btn" id="authBtn">Login</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <!-- Stats Ribbon -->
+    <section class="stats-ribbon" id="statsRibbon">
+      <div class="stat-card">
+        <div class="stat-value" id="moodScore">—</div>
+        <div class="stat-label">Market Mood</div>
+      </div>
+      <div class="stat-card positive">
+        <div class="stat-value" id="positivePct">—</div>
+        <div class="stat-label">Positive</div>
+      </div>
+      <div class="stat-card negative">
+        <div class="stat-value" id="negativePct">—</div>
+        <div class="stat-label">Negative</div>
+      </div>
+      <div class="stat-card neutral-stat">
+        <div class="stat-value" id="neutralPct">—</div>
+        <div class="stat-label">Neutral</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalArticles">—</div>
+        <div class="stat-label">Articles</div>
+      </div>
+    </section>
+
+    <!-- Filter Rail -->
+    <section class="filter-rail" id="filterRail">
+      <button class="filter-pill active" data-filter="all">🔥 All Tickers</button>
+      <button class="filter-pill" data-filter="buy">📈 Buy Signals</button>
+      <button class="filter-pill" data-filter="positive">🟢 Positive</button>
+      <button class="filter-pill" data-filter="negative">🔴 Negative</button>
+      <button class="filter-pill" data-filter="high-mentions">💬 Most Mentioned</button>
+    </section>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+      <!-- Tickers Grid -->
+      <div>
+        <div class="section-header">
+          <h2 class="section-title">📊 Live Ticker Sentiment</h2>
+        </div>
+        <div class="articles-grid" id="tickersGrid">
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <!-- Sector Chart -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">🏗️ Sector Sentiment</div>
+          <div style="position:relative;height:200px;width:100%">
+            <canvas id="sectorChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Sentiment Distribution -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">📈 Sentiment Mix</div>
+          <div style="position:relative;height:200px;width:100%">
+            <canvas id="sentimentChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Movers -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">🏆 Top Mentioned</div>
+          <div id="topMoversList">
+            <div style="text-align:center;padding:20px;color:var(--text-muted)">Loading...</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Market page specific logic
+    let allTickers = [];
+    let currentFilter = 'all';
+
+    // Load Market Mood Stats
+    async function loadMarketStats() {
+      try {
+        const res = await fetch('/api/markets/mood');
+        const data = await res.json();
+
+        if (data) {
+          document.getElementById('moodScore').textContent = data.score || '—';
+          document.getElementById('positivePct').textContent = data.positive_pct ? data.positive_pct.toFixed(1) + '%' : '—';
+          document.getElementById('negativePct').textContent = data.negative_pct ? data.negative_pct.toFixed(1) + '%' : '—';
+          document.getElementById('neutralPct').textContent = data.neutral_pct ? data.neutral_pct.toFixed(1) + '%' : '—';
+          document.getElementById('totalArticles').textContent = data.total || '—';
+
+          // Color code mood score
+          const moodEl = document.getElementById('moodScore');
+          const score = data.score || 50;
+          if (score >= 70) moodEl.parentElement.classList.add('positive');
+          else if (score <= 40) moodEl.parentElement.classList.add('negative');
+        }
+      } catch (err) {
+        console.error('Error loading market stats:', err);
+      }
+    }
+
+    // Load Tickers
+    async function loadTickers() {
+      try {
+        const res = await fetch('/api/markets/tickers');
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+          document.getElementById('tickersGrid').innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1">
+              <div class="empty-state-icon">📊</div>
+              <div class="empty-state-text">No ticker data yet. Run the pipeline to fetch articles.</div>
+            </div>
+          `;
+          return;
+        }
+
+        allTickers = data;
+        renderTickers(data);
+      } catch (err) {
+        console.error('Error loading tickers:', err);
+        document.getElementById('tickersGrid').innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-state-icon">❌</div>
+            <div class="empty-state-text">Failed to load ticker data</div>
+          </div>
+        `;
+      }
+    }
+
+    // Render Tickers (styled like article cards)
+    function renderTickers(tickers) {
+      const grid = document.getElementById('tickersGrid');
+
+      grid.innerHTML = tickers.slice(0, 20).map(ticker => {
+        // Sentiment styling
+        const sentColor = ticker.avg_sentiment === 'positive' ? '#16a34a' :
+                         ticker.avg_sentiment === 'negative' ? '#dc2626' : '#6b7280';
+        const sentClass = ticker.avg_sentiment === 'positive' ? 'positive' :
+                         ticker.avg_sentiment === 'negative' ? 'negative' : 'neutral';
+
+        // Recommendation badge
+        let recBadge = '';
+        let recClass = '';
+        if (ticker.buy_recommendation.includes('buy')) {
+          recBadge = '📈 BUY';
+          recClass = 'buy-signal';
+        } else if (ticker.buy_recommendation.includes('sell') || ticker.buy_recommendation === 'avoid') {
+          recBadge = '📉 SELL';
+          recClass = 'sell-signal';
+        } else {
+          recBadge = '➖ HOLD';
+          recClass = 'hold-signal';
+        }
+
+        const confidence = Math.round(ticker.buy_confidence * 100);
+
+        return `
+          <article class="article-card">
+            <div class="article-header">
+              <h3 class="article-title" style="font-size:28px;font-weight:800;color:${sentColor}">
+                $${escHtml(ticker.ticker)}
+              </h3>
+              <span class="article-source" style="font-size:13px">${ticker.mention_count} 📰 mentions</span>
+            </div>
+
+            <p class="article-summary" style="margin:12px 0;line-height:1.6">
+              ${escHtml(ticker.buy_reasoning || 'No analysis available')}
+            </p>
+
+            <div class="article-footer">
+              <div class="article-meta">
+                <span class="sentiment-badge ${sentClass}">
+                  ${ticker.avg_sentiment === 'positive' ? '🟢' :
+                    ticker.avg_sentiment === 'negative' ? '🔴' : '⚪'}
+                  ${escHtml(ticker.avg_sentiment).toUpperCase()}
+                </span>
+                <span class="signal-badge ${recClass}" style="padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;background:${
+                  recClass === 'buy-signal' ? '#16a34a' :
+                  recClass === 'sell-signal' ? '#dc2626' : '#6b7280'
+                };color:white">
+                  ${recBadge}
+                </span>
+                <span style="font-size:12px;color:var(--text-muted)">
+                  Confidence: ${confidence}%
+                </span>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // Filter Tickers
+    function filterTickers(filter) {
+      currentFilter = filter;
+      let filtered = allTickers;
+
+      if (filter === 'buy') {
+        filtered = allTickers.filter(t => t.buy_recommendation.includes('buy'));
+      } else if (filter === 'positive') {
+        filtered = allTickers.filter(t => t.avg_sentiment === 'positive');
+      } else if (filter === 'negative') {
+        filtered = allTickers.filter(t => t.avg_sentiment === 'negative');
+      } else if (filter === 'high-mentions') {
+        filtered = [...allTickers].sort((a, b) => b.mention_count - a.mention_count);
+      }
+
+      renderTickers(filtered);
+    }
+
+    // Load Sector Chart
+    async function loadSectorChart() {
+      try {
+        const res = await fetch('/api/sector-heatmap');
+        const data = await res.json();
+        const canvas = document.getElementById('sectorChart');
+        const container = canvas?.parentElement;
+
+        if (!canvas) {
+          console.error('Sector chart canvas not found');
+          return;
+        }
+
+        if (!data || Object.keys(data).length === 0) {
+          if (container) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">No sector data available</div>';
+          }
+          return;
+        }
+
+        const sectors = Object.keys(data);
+        const values = Object.values(data);
+
+        new Chart(canvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: sectors,
+            datasets: [{
+              label: 'Sentiment Score',
+              data: values,
+              backgroundColor: values.map(v => v > 0 ? '#16a34a' : v < 0 ? '#dc2626' : '#6b7280'),
+              borderRadius: 6,
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: 10,
+                titleFont: { size: 13, weight: '600' },
+                bodyFont: { size: 12 },
+                cornerRadius: 6,
+                displayColors: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(156,163,175,0.1)',
+                  drawBorder: false
+                },
+                ticks: {
+                  color: '#9ca3af',
+                  font: { size: 11 },
+                  padding: 8
+                }
+              },
+              x: {
+                grid: { display: false, drawBorder: false },
+                ticks: {
+                  color: '#9ca3af',
+                  font: { size: 10 },
+                  padding: 8
+                }
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Sector chart error:', err);
+        const canvas = document.getElementById('sectorChart');
+        if (canvas?.parentElement) {
+          canvas.parentElement.innerHTML = '<div style="text-align:center;padding:40px;color:#dc2626;font-size:13px">Failed to load chart</div>';
+        }
+      }
+    }
+
+    // Load Sentiment Chart
+    async function loadSentimentChart() {
+      try {
+        const res = await fetch('/api/markets/mood');
+        const data = await res.json();
+        const canvas = document.getElementById('sentimentChart');
+        const container = canvas?.parentElement;
+
+        if (!canvas) {
+          console.error('Sentiment chart canvas not found');
+          return;
+        }
+
+        if (!data) {
+          if (container) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">No sentiment data</div>';
+          }
+          return;
+        }
+
+        new Chart(canvas.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Positive', 'Negative', 'Neutral'],
+            datasets: [{
+              data: [data.positive_pct || 0, data.negative_pct || 0, data.neutral_pct || 0],
+              backgroundColor: ['#16a34a', '#dc2626', '#6b7280'],
+              borderWidth: 0,
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  font: { size: 11 },
+                  color: '#9ca3af',
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  boxWidth: 8,
+                  boxHeight: 8
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: 10,
+                titleFont: { size: 13, weight: '600' },
+                bodyFont: { size: 12 },
+                cornerRadius: 6,
+                callbacks: {
+                  label: function(context) {
+                    return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Sentiment chart error:', err);
+        const canvas = document.getElementById('sentimentChart');
+        if (canvas?.parentElement) {
+          canvas.parentElement.innerHTML = '<div style="text-align:center;padding:40px;color:#dc2626;font-size:13px">Failed to load chart</div>';
+        }
+      }
+    }
+
+    // Load Top Movers
+    async function loadTopMovers() {
+      try {
+        const res = await fetch('/api/markets/leaderboard');
+        const data = await res.json();
+        const list = document.getElementById('topMoversList');
+
+        if (!data || data.length === 0) {
+          list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">No data</div>';
+          return;
+        }
+
+        list.innerHTML = data.slice(0, 8).map((item, idx) => {
+          const sentColor = item.avg_sentiment === 'positive' ? '#16a34a' :
+                           item.avg_sentiment === 'negative' ? '#dc2626' : '#6b7280';
+
+          let rank = idx + 1;
+          if (idx === 0) rank = '🥇';
+          else if (idx === 1) rank = '🥈';
+          else if (idx === 2) rank = '🥉';
+
+          return `
+            <div class="cluster-item" style="display:flex;align-items:center;gap:12px;padding:10px;border-bottom:1px solid var(--border-color)">
+              <div style="font-size:20px;width:30px;text-align:center">${rank}</div>
+              <div style="flex:1">
+                <div style="font-weight:700;color:${sentColor};font-size:15px">$${escHtml(item.ticker)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${item.mention_count} mentions</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Top movers error:', err);
+      }
+    }
+
+    // Init filters
+    function initFilters() {
+      document.querySelectorAll('#filterRail .filter-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#filterRail .filter-pill').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          filterTickers(btn.dataset.filter);
+        });
+      });
+    }
+
+    // HTML escape
+    function escHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 Loading Markets page...');
+
+      await Promise.all([
+        loadMarketStats(),
+        loadTickers(),
+        loadSectorChart(),
+        loadSentimentChart(),
+        loadTopMovers()
+      ]);
+
+      initFilters();
+
+      console.log('✅ Markets page loaded');
+    });
+  </script>
+</body>
+</html>

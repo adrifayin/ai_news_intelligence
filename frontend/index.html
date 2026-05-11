@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataStraw — AI News Intelligence</title>
+  <meta name="description" content="AI-powered news intelligence platform with real-time analysis, sentiment tracking, and market insights.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav" id="navbar">
+    <div class="nav-logo">
+      <div class="logo-icon">⚡</div>
+      <span>DataStraw</span>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="nav-link active" id="nav-news">📰 News</a>
+      <a href="/market" class="nav-link" id="nav-market">📈 Markets</a>
+      <a href="/predictions" class="nav-link" id="nav-predictions">🎯 Predictions</a>
+    </div>
+    <div class="nav-actions">
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Search news...">
+      </div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+      <button class="refresh-btn" id="refreshBtn" title="Fetch new articles">↻ Refresh</button>
+      <button class="login-btn" id="authBtn">Login</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <!-- Stats Ribbon -->
+    <section class="stats-ribbon" id="statsRibbon">
+      <div class="stat-card"><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total Articles</div></div>
+      <div class="stat-card positive"><div class="stat-value" id="statPositive">—</div><div class="stat-label">Positive</div></div>
+      <div class="stat-card negative"><div class="stat-value" id="statNegative">—</div><div class="stat-label">Negative</div></div>
+      <div class="stat-card neutral-stat"><div class="stat-value" id="statNeutral">—</div><div class="stat-label">Neutral</div></div>
+      <div class="stat-card"><div class="stat-value" id="statSources">—</div><div class="stat-label">Sources</div></div>
+    </section>
+
+    <!-- Category Filters -->
+    <section class="filter-rail" id="filterRail">
+      <button class="filter-pill active" data-category="all">🌐 All</button>
+      <button class="filter-pill" data-category="technology">💻 Technology</button>
+      <button class="filter-pill" data-category="business">💼 Business</button>
+      <button class="filter-pill" data-category="politics">🏛️ Politics</button>
+      <button class="filter-pill" data-category="science">🔬 Science</button>
+      <button class="filter-pill" data-category="sports">⚽ Sports</button>
+    </section>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+      <!-- Articles -->
+      <div>
+        <div class="articles-grid" id="articlesGrid">
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
+        <!-- FIX 2: Infinite Scroll Sentinel -->
+        <div id="scroll-sentinel"></div>
+        <div id="loading-spinner" class="hidden" style="text-align:center;padding:20px;color:var(--text-muted)">
+          <div class="spinner" style="border:3px solid var(--text-muted);border-top-color:var(--primary);border-radius:50%;width:30px;height:30px;animation:spin 1s linear infinite;margin:0 auto 10px"></div>
+          <p>Loading more articles...</p>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-card">
+          <div class="sidebar-title">📊 Sentiment Chart</div>
+          <canvas id="sentimentChart" width="280" height="200"></canvas>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-title">🔗 Story Clusters</div>
+          <div id="clustersList"></div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-title">🔥 Trending</div>
+          <div class="trending-cloud" id="trendingCloud"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Ask the News Chat -->
+  <button class="chat-fab" id="chatFab" title="Ask the News">💬</button>
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">
+      <span>🤖 Ask the News</span>
+      <button class="chat-close" id="chatClose">✕</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-msg ai">Hi! Ask me anything about today's news. I'll answer based on the articles in the database.</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="What's happening with AI today?">
+      <button id="chatSend">Send</button>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div class="auth-modal" id="authModal">
+    <div class="auth-content">
+      <button class="auth-close" id="authClose">✕</button>
+      
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Login</button>
+        <button class="auth-tab" id="tabRegister">Sign Up</button>
+      </div>
+      
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form active">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="loginUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" required>
+        </div>
+        <button type="submit" class="auth-submit">Login</button>
+        <div class="auth-error" id="loginError"></div>
+      </form>
+      
+      <!-- Register Form -->
+      <form id="registerForm" class="auth-form">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="regUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="regPassword" required>
+        </div>
+        <div class="form-group">
+          <label>Region</label>
+          <select id="regRegion">
+            <option value="">Any</option>
+            <option value="us">United States</option>
+            <option value="gb">United Kingdom</option>
+            <option value="in">India</option>
+            <option value="au">Australia</option>
+            <option value="ca">Canada</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Interests</label>
+          <div class="interests-grid">
+            <label><input type="checkbox" value="technology" class="interest-cb"> Technology</label>
+            <label><input type="checkbox" value="business" class="interest-cb"> Business</label>
+            <label><input type="checkbox" value="politics" class="interest-cb"> Politics</label>
+            <label><input type="checkbox" value="science" class="interest-cb"> Science</label>
+            <label><input type="checkbox" value="sports" class="interest-cb"> Sports</label>
+          </div>
+        </div>
+        <button type="submit" class="auth-submit">Sign Up</button>
+        <div class="auth-error" id="regError"></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

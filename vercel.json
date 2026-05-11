@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://your-render-app.onrender.com/api/$1"
+    },
+    {
+      "source": "/market",
+      "destination": "/market.html"
+    },
+    {
+      "source": "/predictions",
+      "destination": "/predictions.html"
+    }
+  ],
+  "cleanUrls": true
+}
